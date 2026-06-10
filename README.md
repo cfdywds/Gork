@@ -1,4 +1,4 @@
-<img alt="Gork" src="https://github.com/user-attachments/assets/037a0a6e-7986-41cc-b4af-04df612ee886" />
+<img width="2172" height="724" alt="7d8bbec891a9885f567a422de442c2b7" src="https://github.com/user-attachments/assets/a39011c4-fa80-4d89-a84c-498e3f9ea32b" />
 
 [![Go](https://img.shields.io/badge/go-1.25%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/)
 [![OpenAI Compatible](https://img.shields.io/badge/API-OpenAI%20compatible-111827)](#api-%E7%AB%AF%E7%82%B9)

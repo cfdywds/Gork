@@ -60,8 +60,8 @@ htmlcov/
 tmp/
 
 # Go build/test artifacts
-gork
-gork.exe
+/gork
+/gork.exe
 *.test
 *.out
 *.prof

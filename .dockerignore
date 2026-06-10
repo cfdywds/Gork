@@ -22,8 +22,8 @@ build
 *.test
 *.out
 *.prof
-gork
-gork.exe
+/gork
+/gork.exe
 /data
 /data/*
 /data/tmp

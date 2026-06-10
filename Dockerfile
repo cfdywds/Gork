@@ -1,9 +1,12 @@
 # Builder
-FROM golang:1.25-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine AS builder
 
 RUN apk add --no-cache ca-certificates git
 
 WORKDIR /src
+
+ARG TARGETOS
+ARG TARGETARCH
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -11,7 +14,9 @@ RUN go mod download
 COPY app ./app
 COPY cmd ./cmd
 
-RUN CGO_ENABLED=0 GOOS=linux go build \
+RUN target_os="${TARGETOS:-$(go env GOOS)}" \
+    && target_arch="${TARGETARCH:-$(go env GOARCH)}" \
+    && CGO_ENABLED=0 GOOS="${target_os}" GOARCH="${target_arch}" go build \
     -trimpath \
     -ldflags="-s -w" \
     -o /out/gork \
@@ -36,7 +41,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 COPY --from=builder /out/gork /app/gork
-COPY pyproject.toml config.defaults.toml ./
+COPY config.defaults.toml ./
 COPY app/statics ./app/statics
 COPY scripts/entrypoint.sh scripts/init_storage.sh ./scripts/
 
