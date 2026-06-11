@@ -146,6 +146,28 @@ func TestResolveDefaultsPathMatchesPythonSourceRootResolution(t *testing.T) {
 	}
 }
 
+func TestResolveDefaultsPathHandlesTrimpathCallerFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "config.defaults.toml"), []byte("ok = true\n"), 0o600); err != nil {
+		t.Fatalf("write defaults: %v", err)
+	}
+
+	workDir := filepath.Join(root, "app", "platform", "config")
+	if err := os.MkdirAll(workDir, 0o700); err != nil {
+		t.Fatalf("mkdir work dir: %v", err)
+	}
+
+	path := resolveDefaultsPathFromLocations(
+		"github.com/dslzl/gork/app/platform/config/snapshot.go",
+		workDir,
+		"",
+	)
+	want := filepath.Join(root, "config.defaults.toml")
+	if path != want {
+		t.Fatalf("trimpath defaults path = %q, want %q", path, want)
+	}
+}
+
 func writeSnapshotDefaults(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()

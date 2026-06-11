@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -267,9 +266,10 @@ func ApplyEnvConfig(data map[string]any, prefix string, env map[string]string) m
 func ResolveDefaultsPath() string {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
-		return "config.defaults.toml"
+		file = ""
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "..", "config.defaults.toml"))
+	wd, _ := os.Getwd()
+	return resolveDefaultsPathFromLocations(file, wd, "config.defaults.toml")
 }
 
 func configFileModTime(path string) (time.Time, error) {
