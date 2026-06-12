@@ -64,7 +64,7 @@ func makeRedisBackend(options FactoryOptions) (ConfigBackend, error) {
 	}
 	constructor := options.NewRedis
 	if constructor == nil {
-		constructor = newMissingRedisConfigBackend
+		constructor = newGoRedisConfigBackend
 	}
 	return constructor(rawURL)
 }
@@ -82,7 +82,7 @@ func makeSQLBackend(dialect string, options FactoryOptions) (ConfigBackend, erro
 	}
 	constructor := options.NewSQL
 	if constructor == nil {
-		constructor = newMissingSQLConfigBackend
+		constructor = newDatabaseSQLConfigBackend
 	}
 	return constructor(dialect, rawURL)
 }
@@ -118,14 +118,6 @@ func factoryProjectRoot(options FactoryOptions) string {
 	return wd
 }
 
-func newMissingRedisConfigBackend(string) (ConfigBackend, error) {
-	return nil, fmt.Errorf("Redis config backend is not implemented")
-}
-
-func newMissingSQLConfigBackend(string, string) (ConfigBackend, error) {
-	return nil, fmt.Errorf("SQL config backend is not implemented")
-}
-
 type UnsupportedConfigBackend struct {
 	Reason string
 }
@@ -135,6 +127,10 @@ func (b UnsupportedConfigBackend) Load(context.Context) (map[string]any, error) 
 }
 
 func (b UnsupportedConfigBackend) ApplyPatch(context.Context, map[string]any) error {
+	return errors.New(b.Reason)
+}
+
+func (b UnsupportedConfigBackend) Clear(context.Context) error {
 	return errors.New(b.Reason)
 }
 

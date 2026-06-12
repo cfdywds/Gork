@@ -73,13 +73,13 @@ video_max_mb = 0
 # ==================== 代理配置 ====================
 [proxy.egress]
 # 出口模式：direct | single_proxy | proxy_pool
-mode = "direct"
+mode = "single_proxy"
 # 基础代理 URL（API 流量，single_proxy 模式必填）
-proxy_url = ""
+proxy_url = "http://privoxy:8118"
 # 基础代理池（API 流量，proxy_pool 模式必填）
 proxy_pool = []
 # 资源代理 URL（图片/视频下载，未配置则回落到 proxy_url）
-resource_proxy_url = ""
+resource_proxy_url = "http://privoxy:8118"
 # 资源代理池（图片/视频下载，未配置则回落到 proxy_pool）
 resource_proxy_pool = []
 # 跳过代理 SSL 证书验证（代理使用自签名证书时启用）
@@ -87,7 +87,7 @@ skip_ssl_verify = false
 
 [proxy.clearance]
 # Cloudflare clearance 模式：none | manual | flaresolverr
-mode = "none"
+mode = "flaresolverr"
 # 手动模式：Cloudflare Cookie 字符串
 cf_cookies = ""
 # User-Agent（需与 cf_cookies 匹配）
@@ -95,7 +95,7 @@ user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 # curl_cffi 浏览器指纹
 browser = "chrome136"
 # FlareSolverr 服务地址
-flaresolverr_url = ""
+flaresolverr_url = "http://flaresolverr:8191"
 # 挑战等待超时（秒）
 timeout_sec = 60
 # Clearance 刷新间隔（秒）

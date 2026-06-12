@@ -82,6 +82,30 @@ func TestAdminConfigUpdateSanitizesAndRejectsStartupOnly(t *testing.T) {
 	}
 }
 
+func TestAdminConfigResetClearsOverridesAndRunsRuntimeSideEffects(t *testing.T) {
+	resetAdminRouterDepsForTest(t)
+	cfg := &fakeAdminConfig{strs: map[string]string{"logging.file_level": "info"}, ints: map[string]int{"logging.max_files": 5}}
+	adminRouterConfig = cfg
+	adminReconcileRefreshRuntime = func() string { return "quota" }
+	var reloadedLevel string
+	var reloadedMax int
+	adminReloadFileLogging = func(level string, maxFiles int) error {
+		reloadedLevel, reloadedMax = level, maxFiles
+		return nil
+	}
+	reconciled := false
+	adminReconcileLocalMediaCache = func(context.Context) error { reconciled = true; return nil }
+
+	rec := adminRequest(http.MethodPost, "/admin/api/config/reset", "", "Bearer gork")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("reset status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if !cfg.reset || !cfg.loaded || !reconciled || reloadedLevel != "info" || reloadedMax != 5 {
+		t.Fatalf("side effects reset=%v loaded=%v reconciled=%v reload=%s/%d", cfg.reset, cfg.loaded, reconciled, reloadedLevel, reloadedMax)
+	}
+	assertAdminGoldenJSON(t, rec, http.StatusOK, map[string]any{"status": "success", "selection_strategy": "quota"})
+}
+
 func TestAdminStatusAndSyncUseDirectory(t *testing.T) {
 	resetAdminRouterDepsForTest(t)
 	dir := &fakeAdminDirectory{size: 2, revision: 7, changed: true}
@@ -119,6 +143,7 @@ func TestAdminRouterCoreRouteGoldenStatusHeadersAndShapes(t *testing.T) {
 		{name: "verify", method: http.MethodGet, path: "/admin/api/verify", status: http.StatusOK, json: map[string]any{"status": "success"}},
 		{name: "config get", method: http.MethodGet, path: "/admin/api/config", status: http.StatusOK, json: map[string]any{"app.admin_key": "gork"}},
 		{name: "config post", method: http.MethodPost, path: "/admin/api/config", body: `{"cache":{"local":{"image_limit_mb":10}}}`, status: http.StatusOK, json: map[string]any{"status": "success", "selection_strategy": "quota"}},
+		{name: "config reset", method: http.MethodPost, path: "/admin/api/config/reset", status: http.StatusOK, json: map[string]any{"status": "success", "selection_strategy": "quota"}},
 		{name: "storage", method: http.MethodGet, path: "/admin/api/storage", status: http.StatusOK, json: map[string]any{"type": "local"}},
 		{name: "status", method: http.MethodGet, path: "/admin/api/status", status: http.StatusOK, json: map[string]any{"status": "ok", "size": float64(2), "revision": float64(7), "selection_strategy": "quota"}},
 		{name: "sync", method: http.MethodPost, path: "/admin/api/sync", status: http.StatusOK, json: map[string]any{"changed": true, "revision": float64(7)}},
@@ -267,6 +292,7 @@ func resetAdminRouterDepsForTest(t *testing.T) {
 type fakeAdminConfig struct {
 	raw    map[string]any
 	patch  map[string]any
+	reset  bool
 	loaded bool
 	strs   map[string]string
 	ints   map[string]int
@@ -276,6 +302,11 @@ func (c *fakeAdminConfig) Raw() map[string]any { return c.raw }
 
 func (c *fakeAdminConfig) Update(_ context.Context, patch map[string]any) error {
 	c.patch = patch
+	return nil
+}
+
+func (c *fakeAdminConfig) Reset(context.Context) error {
+	c.reset = true
 	return nil
 }
 

@@ -844,6 +844,10 @@ func (b chatConfigBackend) ApplyPatch(context.Context, map[string]any) error {
 	return nil
 }
 
+func (b chatConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (b chatConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

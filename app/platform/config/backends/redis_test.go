@@ -63,6 +63,21 @@ func TestRedisConfigBackendApplyPatchWritesOnlyChangedFieldsAndIncrementsVersion
 	}
 }
 
+func TestRedisConfigBackendClearDeletesHashAndIncrementsVersion(t *testing.T) {
+	client := &fakeRedisClient{}
+	backend := NewRedisConfigBackend(client, RedisConfigOptions{HashKey: "hash", VersionKey: "ver"})
+
+	if err := backend.Clear(context.Background()); err != nil {
+		t.Fatalf("Clear returned error: %v", err)
+	}
+	if client.pipeline == nil || !client.pipeline.executed {
+		t.Fatalf("pipeline was not executed")
+	}
+	if client.pipeline.delKey != "hash" || client.pipeline.incrKey != "ver" {
+		t.Fatalf("pipeline state = %#v", client.pipeline)
+	}
+}
+
 func TestRedisConfigBackendVersionAndClose(t *testing.T) {
 	client := &fakeRedisClient{value: "42"}
 	backend := NewRedisConfigBackend(client, RedisConfigOptions{})
@@ -122,10 +137,15 @@ func (c *fakeRedisClient) AClose(context.Context) error {
 }
 
 type fakeRedisPipeline struct {
+	delKey   string
 	hsetKey  string
 	mapping  map[string]string
 	incrKey  string
 	executed bool
+}
+
+func (p *fakeRedisPipeline) Del(_ context.Context, key string) {
+	p.delKey = key
 }
 
 func (p *fakeRedisPipeline) HSet(_ context.Context, key string, mapping map[string]string) {

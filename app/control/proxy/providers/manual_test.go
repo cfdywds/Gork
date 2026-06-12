@@ -31,6 +31,10 @@ func (f fakeManualGlobalConfigBackend) ApplyPatch(context.Context, map[string]an
 	return nil
 }
 
+func (f fakeManualGlobalConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (f fakeManualGlobalConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

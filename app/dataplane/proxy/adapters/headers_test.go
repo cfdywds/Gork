@@ -25,6 +25,10 @@ func (f fakeHeadersConfigBackend) ApplyPatch(context.Context, map[string]any) er
 	return nil
 }
 
+func (f fakeHeadersConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (f fakeHeadersConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

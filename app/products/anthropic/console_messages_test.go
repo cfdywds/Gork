@@ -298,6 +298,10 @@ func (b consoleMessagesConfigBackend) ApplyPatch(context.Context, map[string]any
 	return nil
 }
 
+func (b consoleMessagesConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (b consoleMessagesConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -233,6 +232,22 @@ func (s *ConfigSnapshot) Update(ctx context.Context, patch map[string]any) error
 	return nil
 }
 
+func (s *ConfigSnapshot) Reset(ctx context.Context) error {
+	backend, err := s.getBackend()
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := backend.Clear(ctx); err != nil {
+		return err
+	}
+	s.data = map[string]any{}
+	s.loaded = false
+	s.version = nil
+	return nil
+}
+
 func (s *ConfigSnapshot) Raw() map[string]any {
 	out := map[string]any{}
 	for key, value := range s.data {
@@ -267,9 +282,10 @@ func ApplyEnvConfig(data map[string]any, prefix string, env map[string]string) m
 func ResolveDefaultsPath() string {
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
-		return "config.defaults.toml"
+		file = ""
 	}
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "..", "config.defaults.toml"))
+	wd, _ := os.Getwd()
+	return resolveDefaultsPathFromLocations(file, wd, "config.defaults.toml")
 }
 
 func configFileModTime(path string) (time.Time, error) {
@@ -293,6 +309,10 @@ func (noopConfigBackend) Load(context.Context) (map[string]any, error) {
 }
 
 func (noopConfigBackend) ApplyPatch(context.Context, map[string]any) error {
+	return nil
+}
+
+func (noopConfigBackend) Clear(context.Context) error {
 	return nil
 }
 

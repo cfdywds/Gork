@@ -24,6 +24,10 @@ func (f fakeSessionGlobalConfigBackend) ApplyPatch(context.Context, map[string]a
 	return nil
 }
 
+func (f fakeSessionGlobalConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (f fakeSessionGlobalConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

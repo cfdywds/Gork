@@ -18,6 +18,7 @@ type RedisClient interface {
 }
 
 type RedisPipeline interface {
+	Del(ctx context.Context, key string)
 	HSet(ctx context.Context, key string, mapping map[string]string)
 	Incr(ctx context.Context, key string)
 	Execute(ctx context.Context) error
@@ -67,6 +68,13 @@ func (b *RedisConfigBackend) ApplyPatch(ctx context.Context, patch map[string]an
 	}
 	pipe := b.client.Pipeline(true)
 	pipe.HSet(ctx, b.hashKey, flat)
+	pipe.Incr(ctx, b.versionKey)
+	return pipe.Execute(ctx)
+}
+
+func (b *RedisConfigBackend) Clear(ctx context.Context) error {
+	pipe := b.client.Pipeline(true)
+	pipe.Del(ctx, b.hashKey)
 	pipe.Incr(ctx, b.versionKey)
 	return pipe.Execute(ctx)
 }

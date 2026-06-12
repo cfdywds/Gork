@@ -44,6 +44,10 @@ func (f fakeFlareSolverrGlobalConfigBackend) ApplyPatch(context.Context, map[str
 	return nil
 }
 
+func (f fakeFlareSolverrGlobalConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (f fakeFlareSolverrGlobalConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

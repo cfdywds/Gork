@@ -17,6 +17,7 @@ import (
 type adminConfigStore interface {
 	Raw() map[string]any
 	Update(context.Context, map[string]any) error
+	Reset(context.Context) error
 	Load(context.Context, string) error
 	GetStr(string, string) string
 	GetInt(string, int) int
@@ -53,6 +54,7 @@ func NewRouter() http.Handler {
 	mux.HandleFunc("/admin/api/config", adminProtectedAny(map[string]http.HandlerFunc{
 		http.MethodGet: handleAdminGetConfig, http.MethodPost: handleAdminUpdateConfig,
 	}))
+	mux.HandleFunc("/admin/api/config/reset", adminProtected(http.MethodPost, handleAdminResetConfig))
 	mux.HandleFunc("/admin/api/storage", adminProtected(http.MethodGet, handleAdminStorage))
 	mux.HandleFunc("/admin/api/status", adminProtected(http.MethodGet, handleAdminStatus))
 	mux.HandleFunc("/admin/api/sync", adminProtected(http.MethodPost, handleAdminSync))
@@ -116,6 +118,15 @@ func handleAdminUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := updateAdminConfig(r.Context(), patch)
+	if err != nil {
+		writeAdminError(w, err)
+		return
+	}
+	writeAdminJSON(w, http.StatusOK, result)
+}
+
+func handleAdminResetConfig(w http.ResponseWriter, r *http.Request) {
+	result, err := resetAdminConfig(r.Context())
 	if err != nil {
 		writeAdminError(w, err)
 		return
@@ -191,6 +202,22 @@ func updateAdminConfig(ctx context.Context, patch map[string]any) (map[string]an
 		}
 	}
 	return map[string]any{"status": "success", "message": "配置已更新", "selection_strategy": adminReconcileRefreshRuntime()}, nil
+}
+
+func resetAdminConfig(ctx context.Context) (map[string]any, error) {
+	if err := adminRouterConfig.Reset(ctx); err != nil {
+		return nil, err
+	}
+	if err := adminRouterConfig.Load(ctx, ""); err != nil {
+		return nil, err
+	}
+	if err := adminReloadFileLogging(adminRouterConfig.GetStr("logging.file_level", ""), adminRouterConfig.GetInt("logging.max_files", 7)); err != nil {
+		return nil, err
+	}
+	if err := adminReconcileLocalMediaCache(ctx); err != nil {
+		return nil, err
+	}
+	return map[string]any{"status": "success", "message": "配置已还原为默认值", "selection_strategy": adminReconcileRefreshRuntime()}, nil
 }
 
 func adminDirectoryError() error {

@@ -95,6 +95,28 @@ func TestSQLConfigBackendApplyPatchKeepsEmptyPatchOutOfTransaction(t *testing.T)
 	}
 }
 
+func TestSQLConfigBackendClearDeletesValuesAndIncrementsVersion(t *testing.T) {
+	engine := &fakeSQLEngine{}
+	backend := NewSQLConfigBackend(engine, SQLConfigOptions{Dialect: "mysql"})
+
+	if err := backend.Clear(context.Background()); err != nil {
+		t.Fatalf("Clear returned error: %v", err)
+	}
+	if engine.ensureCount != 1 {
+		t.Fatalf("ensureCount=%d want 1", engine.ensureCount)
+	}
+	if len(engine.transactions) != 1 {
+		t.Fatalf("transactions=%d want 1", len(engine.transactions))
+	}
+	tx := engine.transactions[0]
+	if tx.dialect != "mysql" || tx.table != "config_store" || tx.deleteExcludeKey != "__version__" {
+		t.Fatalf("tx state=%#v", tx)
+	}
+	if !tx.incremented || !tx.committed || tx.rolledBack {
+		t.Fatalf("tx flags incremented=%t committed=%t rolledBack=%t", tx.incremented, tx.committed, tx.rolledBack)
+	}
+}
+
 func TestSQLConfigBackendVersionAndClose(t *testing.T) {
 	engine := &fakeSQLEngine{version: "42"}
 	backend := NewSQLConfigBackend(engine, SQLConfigOptions{})
@@ -198,13 +220,21 @@ func (e *fakeSQLEngine) Dispose(context.Context) error {
 }
 
 type fakeSQLTx struct {
-	dialect     string
-	table       string
-	versionKey  string
-	values      map[string]string
-	incremented bool
-	committed   bool
-	rolledBack  bool
+	dialect          string
+	table            string
+	versionKey       string
+	deleteExcludeKey string
+	values           map[string]string
+	incremented      bool
+	committed        bool
+	rolledBack       bool
+}
+
+func (tx *fakeSQLTx) DeleteConfigValues(_ context.Context, dialect, tableName, excludeKey string) error {
+	tx.dialect = dialect
+	tx.table = tableName
+	tx.deleteExcludeKey = excludeKey
+	return nil
 }
 
 func (tx *fakeSQLTx) UpsertConfigValue(_ context.Context, dialect, tableName, key, value string) error {

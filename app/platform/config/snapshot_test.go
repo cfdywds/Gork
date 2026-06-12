@@ -99,6 +99,33 @@ func TestConfigSnapshotUpdateInvalidatesVersionAndTypedGetters(t *testing.T) {
 	}
 }
 
+func TestConfigSnapshotResetClearsOverridesAndReloadsDefaults(t *testing.T) {
+	defaults := writeSnapshotDefaults(t)
+	backend := &fakeConfigBackend{
+		data:    map[string]any{"proxy": map[string]any{"timeout": int64(20), "mode": "pool"}},
+		version: "v1",
+	}
+	snapshot := NewConfigSnapshot(backend, ConfigSnapshotOptions{})
+	if err := snapshot.Load(context.Background(), defaults); err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+
+	if err := snapshot.Reset(context.Background()); err != nil {
+		t.Fatalf("Reset returned error: %v", err)
+	}
+	if !backend.cleared {
+		t.Fatalf("backend was not cleared")
+	}
+	backend.data = map[string]any{}
+	backend.version = "v2"
+	if err := snapshot.Load(context.Background(), defaults); err != nil {
+		t.Fatalf("Load after Reset returned error: %v", err)
+	}
+	if snapshot.GetInt("proxy.timeout", 0) != 10 || snapshot.GetStr("proxy.mode", "") != "" {
+		t.Fatalf("reset should expose defaults only: %#v", snapshot.Raw())
+	}
+}
+
 func TestConfigSnapshotLoadMissingDefaultsReturnsErrorAndRawIsShallowCopy(t *testing.T) {
 	snapshot := NewConfigSnapshot(&fakeConfigBackend{}, ConfigSnapshotOptions{})
 	err := snapshot.Load(context.Background(), filepath.Join(t.TempDir(), "missing.toml"))
@@ -146,6 +173,28 @@ func TestResolveDefaultsPathMatchesPythonSourceRootResolution(t *testing.T) {
 	}
 }
 
+func TestResolveDefaultsPathHandlesTrimpathCallerFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "config.defaults.toml"), []byte("ok = true\n"), 0o600); err != nil {
+		t.Fatalf("write defaults: %v", err)
+	}
+
+	workDir := filepath.Join(root, "app", "platform", "config")
+	if err := os.MkdirAll(workDir, 0o700); err != nil {
+		t.Fatalf("mkdir work dir: %v", err)
+	}
+
+	path := resolveDefaultsPathFromLocations(
+		"github.com/dslzl/gork/app/platform/config/snapshot.go",
+		workDir,
+		"",
+	)
+	want := filepath.Join(root, "config.defaults.toml")
+	if path != want {
+		t.Fatalf("trimpath defaults path = %q, want %q", path, want)
+	}
+}
+
 func writeSnapshotDefaults(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -174,6 +223,7 @@ type fakeConfigBackend struct {
 	loadCalls    int
 	versionCalls int
 	patches      []map[string]any
+	cleared      bool
 }
 
 func (b *fakeConfigBackend) Load(context.Context) (map[string]any, error) {
@@ -183,6 +233,11 @@ func (b *fakeConfigBackend) Load(context.Context) (map[string]any, error) {
 
 func (b *fakeConfigBackend) ApplyPatch(_ context.Context, patch map[string]any) error {
 	b.patches = append(b.patches, patch)
+	return nil
+}
+
+func (b *fakeConfigBackend) Clear(context.Context) error {
+	b.cleared = true
 	return nil
 }
 

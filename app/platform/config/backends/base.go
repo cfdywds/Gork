@@ -17,6 +17,9 @@ type ConfigBackend interface {
 	// ApplyPatch persists only the keys present in patch.
 	ApplyPatch(context.Context, map[string]any) error
 
+	// Clear removes all stored user-overrides.
+	Clear(context.Context) error
+
 	// Version returns an opaque version token.
 	Version(context.Context) (any, error)
 

@@ -27,6 +27,7 @@ type SQLConfigEngine interface {
 }
 
 type SQLConfigTx interface {
+	DeleteConfigValues(ctx context.Context, dialect, tableName, excludeKey string) error
 	UpsertConfigValue(ctx context.Context, dialect, tableName, key, value string) error
 	// IncrementConfigVersion mirrors the Python version UPSERT.
 	// It must insert version row with value "1" when missing.
@@ -103,6 +104,33 @@ func (b *SQLConfigBackend) ApplyPatch(ctx context.Context, patch map[string]any)
 		if err := tx.UpsertConfigValue(ctx, b.dialect, defaultSQLConfigTableName, key, value); err != nil {
 			return err
 		}
+	}
+	if err := tx.IncrementConfigVersion(ctx, b.dialect, defaultSQLConfigTableName, defaultSQLConfigVersionKey); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+func (b *SQLConfigBackend) Clear(ctx context.Context) error {
+	if err := b.ensureTable(ctx); err != nil {
+		return err
+	}
+	tx, err := b.engine.BeginConfigTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+	if err := tx.DeleteConfigValues(ctx, b.dialect, defaultSQLConfigTableName, defaultSQLConfigVersionKey); err != nil {
+		return err
 	}
 	if err := tx.IncrementConfigVersion(ctx, b.dialect, defaultSQLConfigTableName, defaultSQLConfigVersionKey); err != nil {
 		return err

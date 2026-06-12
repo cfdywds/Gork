@@ -1,13 +1,4 @@
 services:
-  # ── Init: 写入代理配置到 config.toml ──────────────────────────────────────
-  init-config:
-    image: python:3.13-alpine
-    volumes:
-      - ./data:/app/data
-      - ./scripts:/scripts:ro
-    command: ["python3", "/scripts/init_proxy_config.py"]
-    restart: "no"
-
   # ── WARP: Cloudflare 出口代理 ─────────────────────────────────────────────
   warp-proxy:
     image: caomingjun/warp:latest
@@ -64,6 +55,7 @@ services:
       ACCOUNT_POSTGRESQL_URL: ${ACCOUNT_POSTGRESQL_URL:-}
       RUNTIME_REDIS_URL: ${RUNTIME_REDIS_URL:-}
     volumes:
+      - ./config.defaults.toml:/app/config.defaults.toml:ro
       - ./data:/app/data
       - ./logs:/app/logs
     healthcheck:
@@ -73,8 +65,6 @@ services:
       start_period: 15s
       retries: 3
     depends_on:
-      init-config:
-        condition: service_completed_successfully
       warp-proxy:
         condition: service_started
       privoxy:

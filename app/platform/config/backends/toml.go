@@ -61,6 +61,13 @@ func (b *TomlConfigBackend) ApplyPatch(_ context.Context, patch map[string]any) 
 	return writeBackendTOML(out, merged)
 }
 
+func (b *TomlConfigBackend) Clear(context.Context) error {
+	if err := os.MkdirAll(filepath.Dir(b.path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(b.path, []byte{}, 0o644)
+}
+
 func (b *TomlConfigBackend) Version(context.Context) (any, error) {
 	info, err := os.Stat(b.path)
 	if err != nil {

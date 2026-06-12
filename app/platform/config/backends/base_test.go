@@ -23,6 +23,11 @@ func (b *fakeConfigBackend) ApplyPatch(_ context.Context, patch map[string]any) 
 	return nil
 }
 
+func (b *fakeConfigBackend) Clear(context.Context) error {
+	b.data = map[string]any{}
+	return nil
+}
+
 func (b *fakeConfigBackend) Version(_ context.Context) (any, error) {
 	return b.version, nil
 }

@@ -72,6 +72,35 @@ func TestTomlConfigBackendApplyPatchDeepMergesAndCreatesParent(t *testing.T) {
 	}
 }
 
+func TestTomlConfigBackendClearRemovesStoredOverrides(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nested", "config.toml")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte("[model]\nname = \"old\"\n"), 0o644); err != nil {
+		t.Fatalf("write existing: %v", err)
+	}
+
+	backend := NewTomlConfigBackend(path)
+	if err := backend.Clear(context.Background()); err != nil {
+		t.Fatalf("Clear returned error: %v", err)
+	}
+	loaded, err := backend.Load(context.Background())
+	if err != nil {
+		t.Fatalf("Load after Clear returned error: %v", err)
+	}
+	if len(loaded) != 0 {
+		t.Fatalf("cleared load = %#v", loaded)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("cleared file should exist: %v", err)
+	}
+	if info.Size() != 0 {
+		t.Fatalf("cleared file size = %d", info.Size())
+	}
+}
+
 func TestTomlConfigBackendRoundTripsArraysLikePythonTomllibTomliW(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
 	if err := os.WriteFile(path, []byte("[proxy.egress]\nproxy_pool = [\"http://a\", \"http://b\"]\nreset_session_status_codes = [403]\nflags = [true, false]\n"), 0o644); err != nil {

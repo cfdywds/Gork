@@ -255,6 +255,10 @@ func (b accountSelectionConfigBackend) ApplyPatch(context.Context, map[string]an
 	return nil
 }
 
+func (b accountSelectionConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (b accountSelectionConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

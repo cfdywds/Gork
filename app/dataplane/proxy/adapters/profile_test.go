@@ -22,6 +22,10 @@ func (f fakeProfileConfigBackend) ApplyPatch(context.Context, map[string]any) er
 	return nil
 }
 
+func (f fakeProfileConfigBackend) Clear(context.Context) error {
+	return nil
+}
+
 func (f fakeProfileConfigBackend) Version(context.Context) (any, error) {
 	return "test", nil
 }

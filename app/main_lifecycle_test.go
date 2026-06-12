@@ -336,6 +336,7 @@ func (lifecycleConfigBackend) Load(context.Context) (map[string]any, error) {
 func (lifecycleConfigBackend) ApplyPatch(context.Context, map[string]any) error {
 	return nil
 }
+func (lifecycleConfigBackend) Clear(context.Context) error          { return nil }
 func (lifecycleConfigBackend) Version(context.Context) (any, error) { return 0, nil }
 func (lifecycleConfigBackend) Close(context.Context) error          { return nil }
 

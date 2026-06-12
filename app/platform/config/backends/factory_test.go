@@ -72,6 +72,56 @@ func TestCreateConfigBackendDefaultLocalUsesTomlBackend(t *testing.T) {
 	}
 }
 
+func TestCreateConfigBackendDefaultRemoteBackendsUseRealConstructors(t *testing.T) {
+	redisBackend, err := CreateConfigBackend(FactoryOptions{
+		Env: map[string]string{
+			"ACCOUNT_STORAGE":   "redis",
+			"ACCOUNT_REDIS_URL": "redis://localhost:6379/0",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateConfigBackend default redis returned error: %v", err)
+	}
+	if _, ok := redisBackend.(*RedisConfigBackend); !ok {
+		t.Fatalf("default redis backend = %T, want *RedisConfigBackend", redisBackend)
+	}
+	if err := redisBackend.Close(context.Background()); err != nil {
+		t.Fatalf("default redis backend Close returned error: %v", err)
+	}
+
+	mysqlBackend, err := CreateConfigBackend(FactoryOptions{
+		Env: map[string]string{
+			"ACCOUNT_STORAGE":   "mysql",
+			"ACCOUNT_MYSQL_URL": "user:pass@tcp(localhost:3306)/gork",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateConfigBackend default mysql returned error: %v", err)
+	}
+	if _, ok := mysqlBackend.(*SQLConfigBackend); !ok {
+		t.Fatalf("default mysql backend = %T, want *SQLConfigBackend", mysqlBackend)
+	}
+	if err := mysqlBackend.Close(context.Background()); err != nil {
+		t.Fatalf("default mysql backend Close returned error: %v", err)
+	}
+
+	postgresBackend, err := CreateConfigBackend(FactoryOptions{
+		Env: map[string]string{
+			"ACCOUNT_STORAGE":        "postgresql",
+			"ACCOUNT_POSTGRESQL_URL": "postgres://user:pass@localhost/gork?sslmode=disable",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateConfigBackend default postgresql returned error: %v", err)
+	}
+	if _, ok := postgresBackend.(*SQLConfigBackend); !ok {
+		t.Fatalf("default postgresql backend = %T, want *SQLConfigBackend", postgresBackend)
+	}
+	if err := postgresBackend.Close(context.Background()); err != nil {
+		t.Fatalf("default postgresql backend Close returned error: %v", err)
+	}
+}
+
 func TestCreateConfigBackendRedisAndSQLValidateURLs(t *testing.T) {
 	calls := &factoryCalls{}
 	backend, err := CreateConfigBackend(FactoryOptions{
@@ -175,6 +225,7 @@ type fakeFactoryBackend struct{}
 
 func (fakeFactoryBackend) Load(context.Context) (map[string]any, error)     { return map[string]any{}, nil }
 func (fakeFactoryBackend) ApplyPatch(context.Context, map[string]any) error { return nil }
+func (fakeFactoryBackend) Clear(context.Context) error                      { return nil }
 func (fakeFactoryBackend) Version(context.Context) (any, error)             { return nil, nil }
 func (fakeFactoryBackend) Close(context.Context) error                      { return nil }
 
