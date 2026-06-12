@@ -52,9 +52,7 @@ var (
 		}
 		return result.FileID, result.FileURI, nil
 	}
-	streamPost = func(context.Context, chatStreamRequest) (*chatStreamResponse, error) {
-		return nil, fmt.Errorf("chat stream transport is not configured")
-	}
+	streamPost              = defaultChatStreamPost
 	currentAccountStrategy  = dataaccount.CurrentStrategy
 	chatRefreshService      = defaultChatRefreshService
 	isInvalidCredentials    = protocol.IsInvalidCredentialsError

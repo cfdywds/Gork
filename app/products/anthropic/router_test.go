@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dslzl/gork/app/platform"
 	"github.com/dslzl/gork/app/platform/auth"
 )
 
@@ -149,6 +150,22 @@ func TestAnthropicRouterRequiresAPIKeyWhenConfigured(t *testing.T) {
 	rec = postAnthropicMessages(`{"model":"grok-4.20-auto","messages":[{"role":"user","content":"hi"}]}`, "Bearer secret")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("valid key status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAnthropicRouterSerializesTypedUpstreamError(t *testing.T) {
+	resetAnthropicRouterDepsForTest(t)
+	anthropicRouterMessages = func(context.Context, MessagesOptions) (MessagesResult, error) {
+		return MessagesResult{}, platform.NewUpstreamError("proxy failed", http.StatusBadGateway, "")
+	}
+
+	rec := postAnthropicMessages(`{"model":"grok-4.20-auto","messages":[{"role":"user","content":"hi"}]}`, "")
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	errBody := decodeAnthropicRouterBody(t, rec)["error"].(map[string]any)
+	if errBody["type"] != string(platform.ErrorKindUpstream) || errBody["code"] != "upstream_error" {
+		t.Fatalf("error body=%#v", errBody)
 	}
 }
 

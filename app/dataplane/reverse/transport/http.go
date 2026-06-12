@@ -20,6 +20,8 @@ const (
 	defaultPostStreamTimeout = 120 * time.Second
 	defaultJSONTimeout       = 30 * time.Second
 	defaultBytesTimeout      = 120 * time.Second
+	defaultLineBufferSize    = 64 * 1024
+	maxLineBufferSize        = 16 * 1024 * 1024
 )
 
 type HTTPClient interface {
@@ -199,7 +201,9 @@ func newHTTPLineStream(response HTTPResponse) *HTTPLineStream {
 	if reader == nil {
 		reader = io.NopCloser(bytes.NewReader(response.Body))
 	}
-	return &HTTPLineStream{scanner: bufio.NewScanner(reader), closer: reader}
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, defaultLineBufferSize), maxLineBufferSize)
+	return &HTTPLineStream{scanner: scanner, closer: reader}
 }
 
 func (s *HTTPLineStream) Next() (string, bool, error) {

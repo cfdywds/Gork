@@ -11,6 +11,7 @@ import (
 	controlaccount "github.com/dslzl/gork/app/control/account"
 	"github.com/dslzl/gork/app/control/model"
 	dataaccount "github.com/dslzl/gork/app/dataplane/account"
+	reverseconsole "github.com/dslzl/gork/app/dataplane/reverse/console"
 	"github.com/dslzl/gork/app/dataplane/reverse/protocol"
 	"github.com/dslzl/gork/app/platform"
 	platformconfig "github.com/dslzl/gork/app/platform/config"
@@ -72,7 +73,7 @@ type consoleMessagesRefreshProvider interface {
 var (
 	consoleMessagesDirectoryProvider = defaultConsoleMessagesDirectoryProvider
 	consoleMessagesStream            = func(ctx context.Context, token string, payload map[string]any, timeoutS float64) ([]protocol.ConsoleStreamEvent, error) {
-		return protocol.StreamConsoleChat(ctx, token, payload, protocol.ConsoleStreamOptions{TimeoutS: timeoutS})
+		return reverseconsole.StreamChat(ctx, token, payload, timeoutS)
 	}
 	consoleMessagesMaxRetries     = products.SelectionMaxRetries
 	consoleMessagesTimeoutSeconds = defaultConsoleMessagesTimeoutSeconds

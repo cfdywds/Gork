@@ -158,6 +158,7 @@ func defaultAppMainStartAccountDirectory(ctx context.Context, state *appMainLife
 		return nil, nil
 	}
 	directory := accountdataplane.NewAccountDirectory(state.repository)
+	restoreDirectory := accountdataplane.BindAccountDirectory(directory)
 	state.directory = directory
 	state.bindAdminRuntime()
 
@@ -171,6 +172,7 @@ func defaultAppMainStartAccountDirectory(ctx context.Context, state *appMainLife
 	return func(context.Context) error {
 		cancel()
 		<-done
+		restoreDirectory()
 		return nil
 	}, nil
 }

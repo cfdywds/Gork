@@ -91,7 +91,7 @@ func NewProxyDirectory(options ...DirectoryOptions) *ProxyDirectory {
 	}
 	cfg := option.Config
 	if cfg == nil {
-		cfg = emptyDirectoryConfig{}
+		cfg = globalDirectoryConfig{}
 	}
 	manual := option.ManualProvider
 	if manual == nil {

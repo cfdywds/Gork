@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"sync"
 )
 
 type netHTTPClient struct{}
@@ -33,7 +35,12 @@ func doHTTPRequest(ctx context.Context, method string, request HTTPRequest) (HTT
 	for key, value := range request.Headers {
 		rawRequest.Header.Set(key, value)
 	}
-	response, err := http.DefaultClient.Do(rawRequest)
+	client, err := httpClientForRequest(request)
+	if err != nil {
+		cancel()
+		return HTTPResponse{}, err
+	}
+	response, err := client.Do(rawRequest)
 	if err != nil {
 		cancel()
 		return HTTPResponse{}, err
@@ -52,6 +59,57 @@ func doHTTPRequest(ctx context.Context, method string, request HTTPRequest) (HTT
 		return HTTPResponse{}, err
 	}
 	return HTTPResponse{StatusCode: response.StatusCode, Body: body, Headers: firstHeaderValues(response.Header)}, nil
+}
+
+var (
+	httpClientCache   = make(map[string]*http.Client)
+	httpClientCacheMu sync.RWMutex
+)
+
+func httpClientForRequest(request HTTPRequest) (*http.Client, error) {
+	if request.Lease == nil || request.Lease.ProxyURL == nil || strings.TrimSpace(*request.Lease.ProxyURL) == "" {
+		return http.DefaultClient, nil
+	}
+	proxyURL, err := parseHTTPProxyURL(*request.Lease.ProxyURL)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheKey := proxyURL.String()
+	httpClientCacheMu.RLock()
+	if cached, ok := httpClientCache[cacheKey]; ok {
+		httpClientCacheMu.RUnlock()
+		return cached, nil
+	}
+	httpClientCacheMu.RUnlock()
+
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("default HTTP transport has unexpected type %T", http.DefaultTransport)
+	}
+	cloned := transport.Clone()
+	cloned.Proxy = http.ProxyURL(proxyURL)
+	client := &http.Client{Transport: cloned}
+
+	httpClientCacheMu.Lock()
+	httpClientCache[cacheKey] = client
+	httpClientCacheMu.Unlock()
+
+	return client, nil
+}
+
+func parseHTTPProxyURL(raw string) (*url.URL, error) {
+	proxyURL, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return nil, err
+	}
+	switch strings.ToLower(proxyURL.Scheme) {
+	case "socks", "socks5h":
+		proxyURL.Scheme = "socks5"
+	case "socks4", "socks4a":
+		return nil, fmt.Errorf("unsupported proxy scheme %q", proxyURL.Scheme)
+	}
+	return proxyURL, nil
 }
 
 func httpRequestURL(request HTTPRequest) string {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	accountcontrol "github.com/dslzl/gork/app/control/account"
+	accountdataplane "github.com/dslzl/gork/app/dataplane/account"
 	configbackends "github.com/dslzl/gork/app/platform/config/backends"
 	platformstartup "github.com/dslzl/gork/app/platform/startup"
 )
@@ -258,6 +259,13 @@ func TestDefaultAccountDirectoryLifecycleBootstrapsAndSyncsLikePython(t *testing
 	if state.directory == nil {
 		t.Fatalf("account directory lifecycle did not bind directory")
 	}
+	bound, err := accountdataplane.GetAccountDirectory(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("bound account directory returned error: %v", err)
+	}
+	if bound != state.directory {
+		t.Fatalf("global account directory was not bound to lifecycle directory")
+	}
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) && state.directory.Revision() != 2 {
 		time.Sleep(10 * time.Millisecond)
@@ -267,6 +275,9 @@ func TestDefaultAccountDirectoryLifecycleBootstrapsAndSyncsLikePython(t *testing
 	}
 	if err := cleanup(context.Background()); err != nil {
 		t.Fatalf("cleanup error: %v", err)
+	}
+	if _, err := accountdataplane.GetAccountDirectory(context.Background(), nil); err == nil {
+		t.Fatalf("global account directory was not cleared after cleanup")
 	}
 	if len(repo.scanCalls) == 0 || repo.scanCalls[0] != 1 {
 		t.Fatalf("scan revisions = %#v", repo.scanCalls)

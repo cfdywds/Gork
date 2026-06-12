@@ -1219,14 +1219,8 @@
 
   function scheduleAssistantEntryRender(entry) {
     if (!entry) return;
-    if (!entry.renderFrame) {
-      entry.renderFrame = window.requestAnimationFrame(() => {
-        renderAssistantEntry(entry);
-        scrollThread();
-      });
-    } else {
-      scrollThread();
-    }
+    renderAssistantEntry(entry);
+    scrollThread();
   }
 
   function flushAssistantEntry(entry) {

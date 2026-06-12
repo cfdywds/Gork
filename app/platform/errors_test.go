@@ -1,6 +1,9 @@
 package platform
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestAppErrorToDictMatchesOpenAIErrorShape(t *testing.T) {
 	err := NewAppError("bad input", ErrorKindValidation, "invalid_value", 400, map[string]any{"param": "model"})
@@ -93,5 +96,27 @@ func TestValidationErrorParamOnlyAppearsWhenProvided(t *testing.T) {
 	serverErr := NewAppError("server", ErrorKindServer, "internal_error", 500, nil).ToDict()["error"].(map[string]any)
 	if _, ok := serverErr["param"]; ok {
 		t.Fatalf("AppError without param details should not include param")
+	}
+}
+
+func TestSpecificAppErrorsUnwrapToAppError(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		code string
+	}{
+		{name: "validation", err: NewValidationError("bad", "body", ""), code: "invalid_value"},
+		{name: "auth", err: NewAuthError("nope"), code: "invalid_api_key"},
+		{name: "rate limit", err: NewRateLimitError("busy"), code: "rate_limit_exceeded"},
+		{name: "upstream", err: NewUpstreamError("proxy failed", 502, ""), code: "upstream_error"},
+		{name: "stream idle", err: NewStreamIdleTimeout(1.5), code: "stream_idle_timeout"},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			var appErr *AppError
+			if !errors.As(tt.err, &appErr) || appErr.Code != tt.code {
+				t.Fatalf("errors.As(%T) = %#v, want code %q", tt.err, appErr, tt.code)
+			}
+		})
 	}
 }

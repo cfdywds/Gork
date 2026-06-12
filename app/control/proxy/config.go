@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"strings"
 
 	platformconfig "github.com/dslzl/gork/app/platform/config"
@@ -27,6 +28,31 @@ type globalStringConfig struct{}
 
 func (globalStringConfig) GetString(key, defaultValue string) string {
 	return platformconfig.GlobalConfig.GetStr(key, defaultValue)
+}
+
+type globalDirectoryConfig struct{}
+
+func (globalDirectoryConfig) GetString(key, defaultValue string) string {
+	return platformconfig.GlobalConfig.GetStr(key, defaultValue)
+}
+
+func (globalDirectoryConfig) GetList(key string, defaultValue []string) []string {
+	values := platformconfig.GlobalConfig.GetList(key, nil)
+	if len(values) == 0 {
+		return defaultValue
+	}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		text := strings.TrimSpace(fmt.Sprint(value))
+		if text != "" {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
+func (globalDirectoryConfig) GetInt(key string, defaultValue int) int {
+	return platformconfig.GlobalConfig.GetInt(key, defaultValue)
 }
 
 func configString(cfg StringConfig, key string) string {

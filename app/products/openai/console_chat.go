@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/dslzl/gork/app/control/model"
+	reverseconsole "github.com/dslzl/gork/app/dataplane/reverse/console"
 	"github.com/dslzl/gork/app/dataplane/reverse/protocol"
 	"github.com/dslzl/gork/app/platform"
 )
 
 var consoleStreamChat = func(ctx context.Context, token string, payload map[string]any, timeoutS float64) ([]protocol.ConsoleStreamEvent, error) {
-	return protocol.StreamConsoleChat(ctx, token, payload, protocol.ConsoleStreamOptions{TimeoutS: timeoutS})
+	return reverseconsole.StreamChat(ctx, token, payload, timeoutS)
 }
 
 func init() {

@@ -130,8 +130,12 @@ func writeRouterStream(w http.ResponseWriter, frames []string) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.WriteHeader(http.StatusOK)
+	flusher, ok := w.(http.Flusher)
 	for _, frame := range frames {
 		_, _ = w.Write([]byte(frame))
+		if ok {
+			flusher.Flush()
+		}
 	}
 }
 

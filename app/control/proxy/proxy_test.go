@@ -3,7 +3,11 @@ package proxy
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
+
+	platformconfig "github.com/dslzl/gork/app/platform/config"
 )
 
 type fakeDirectoryConfig struct {
@@ -121,6 +125,50 @@ func TestProxyDirectoryLoadBuildsNodesAndPreservesValidAffinities(t *testing.T) 
 	nodes := directory.Nodes()
 	if len(nodes) != 1 || nodes[0].NodeID != "single" || nodes[0].ProxyURL == nil || *nodes[0].ProxyURL != "http://base" {
 		t.Fatalf("nodes = %#v", nodes)
+	}
+}
+
+func TestGetProxyDirectoryUsesGlobalConfigWhenNoOptions(t *testing.T) {
+	defaultsPath := filepath.Join(t.TempDir(), "config.defaults.toml")
+	if err := os.WriteFile(defaultsPath, []byte(""), 0o600); err != nil {
+		t.Fatalf("write defaults: %v", err)
+	}
+	previousConfig := platformconfig.GlobalConfig
+	globalDirectoryMu.Lock()
+	previousDirectory := globalDirectory
+	globalDirectory = nil
+	globalDirectoryMu.Unlock()
+	t.Cleanup(func() {
+		platformconfig.GlobalConfig = previousConfig
+		globalDirectoryMu.Lock()
+		globalDirectory = previousDirectory
+		globalDirectoryMu.Unlock()
+	})
+
+	platformconfig.GlobalConfig = platformconfig.NewConfigSnapshot(fakeGlobalConfigBackend{
+		data: map[string]any{
+			"proxy": map[string]any{
+				"egress": map[string]any{
+					"mode":      "single_proxy",
+					"proxy_url": "http://proxy.test:8080",
+				},
+			},
+		},
+	}, platformconfig.ConfigSnapshotOptions{})
+	if err := platformconfig.GlobalConfig.Load(context.Background(), defaultsPath); err != nil {
+		t.Fatalf("load global config: %v", err)
+	}
+
+	directory, err := GetProxyDirectory(context.Background())
+	if err != nil {
+		t.Fatalf("GetProxyDirectory returned error: %v", err)
+	}
+	lease, err := directory.Acquire(context.Background())
+	if err != nil {
+		t.Fatalf("Acquire returned error: %v", err)
+	}
+	if lease.ProxyURL == nil || *lease.ProxyURL != "http://proxy.test:8080" {
+		t.Fatalf("lease proxy URL = %#v", lease.ProxyURL)
 	}
 }
 

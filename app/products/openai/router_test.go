@@ -316,6 +316,26 @@ func TestRouterImageEditsMultipartDispatchesOptions(t *testing.T) {
 	}
 }
 
+func TestRouterSerializesTypedUpstreamError(t *testing.T) {
+	resetRouterDepsForTest(t)
+	routerCompletions = func(context.Context, chatCompletionOptions) (chatCompletionResult, error) {
+		return chatCompletionResult{}, platform.NewUpstreamError("proxy failed", http.StatusBadGateway, "")
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(`{"model":"grok-4.20-fast","messages":[{"role":"user","content":"hi"}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	NewRouter().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	errBody := decodeRouterJSON(t, rec)["error"].(map[string]any)
+	if errBody["type"] != string(platform.ErrorKindUpstream) || errBody["code"] != "upstream_error" {
+		t.Fatalf("error body=%#v", errBody)
+	}
+}
+
 func TestRouterRouteGoldenStatusHeadersAndShapes(t *testing.T) {
 	resetRouterDepsForTest(t)
 	resetVideoDepsForTest(t)

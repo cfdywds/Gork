@@ -82,6 +82,13 @@ func NewValidationError(message, param, code string) *ValidationError {
 	}
 }
 
+func (e *ValidationError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.AppError
+}
+
 // AuthError represents invalid or missing API credentials.
 type AuthError struct {
 	*AppError
@@ -95,6 +102,13 @@ func NewAuthError(message string) *AuthError {
 	return &AuthError{AppError: NewAppError(message, ErrorKindAuthentication, "invalid_api_key", 401, nil)}
 }
 
+func (e *AuthError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.AppError
+}
+
 // RateLimitError represents unavailable account capacity.
 type RateLimitError struct {
 	*AppError
@@ -106,6 +120,13 @@ func NewRateLimitError(message string) *RateLimitError {
 		message = "No available accounts"
 	}
 	return &RateLimitError{AppError: NewAppError(message, ErrorKindRateLimit, "rate_limit_exceeded", 429, nil)}
+}
+
+func (e *RateLimitError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.AppError
 }
 
 // UpstreamError represents an upstream XAI/Grok failure.
@@ -125,6 +146,13 @@ func NewUpstreamError(message string, status int, body string) *UpstreamError {
 	}
 }
 
+func (e *UpstreamError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.AppError
+}
+
 // StreamIdleTimeout represents a streaming response idle timeout.
 type StreamIdleTimeout struct {
 	*AppError
@@ -138,4 +166,11 @@ func NewStreamIdleTimeout(timeoutSeconds float64) *StreamIdleTimeout {
 		AppError:       NewAppError("Stream idle timeout after "+value+"s", ErrorKindUpstream, "stream_idle_timeout", 504, nil),
 		TimeoutSeconds: timeoutSeconds,
 	}
+}
+
+func (e *StreamIdleTimeout) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.AppError
 }
